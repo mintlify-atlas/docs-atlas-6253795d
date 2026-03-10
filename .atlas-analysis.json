@@ -1,0 +1,72 @@
+{
+  "projectType": "frontend",
+  "projectName": "Astro Vercel Boilerplate",
+  "projectDescription": "A boilerplate demonstrating Astro's capabilities with Vercel's deployment features",
+  "theme": "mint",
+  "primaryColor": "#ffffff",
+  "lightColor": "#fc9404",
+  "darkColor": null,
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "deployment"
+            ]
+          },
+          {
+            "group": "Features",
+            "pages": [
+              "features/ssr",
+              "features/isr",
+              "features/edge-functions",
+              "features/image-optimization",
+              "features/analytics",
+              "features/middleware"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "configuration/vercel-adapter",
+              "configuration/project-setup"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Reference",
+        "groups": [
+          {
+            "group": "API",
+            "pages": [
+              "reference/api-routes",
+              "reference/components"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Server-Side Rendering (SSR)",
+    "Incremental Static Regeneration (ISR)",
+    "Edge Functions",
+    "Image Optimization",
+    "Web Analytics",
+    "Edge Middleware"
+  ],
+  "publicApiSurface": [
+    "/ssr - Server-side rendered page",
+    "/isr - Incremental static regeneration page",
+    "/edge.json - Edge function API endpoint",
+    "/api/revalidate - ISR revalidation endpoint",
+    "/image - Image optimization demo",
+    "defineMiddleware - Astro middleware helper"
+  ]
+}
