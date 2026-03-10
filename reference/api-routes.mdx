@@ -1,0 +1,252 @@
+---
+title: 'API Routes'
+description: 'Reference documentation for API routes in the Astro Vercel Boilerplate'
+---
+
+API routes in Astro allow you to create serverless endpoints that return JSON or other data. This boilerplate includes two API routes that demonstrate different use cases.
+
+## Understanding Astro API Routes
+
+Astro API routes use the `APIRoute` type and receive an `APIContext` object with request information. Routes are defined by exporting HTTP method handlers (GET, POST, etc.).
+
+### APIRoute Type
+
+The `APIRoute` type defines the signature for API endpoint handlers:
+
+```typescript
+import type { APIRoute, APIContext } from 'astro'
+
+export const GET: APIRoute = (context: APIContext) => {
+  // Return a Response object
+  return new Response(JSON.stringify({ data: 'value' }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' }
+  })
+}
+```
+
+### APIContext Properties
+
+The `APIContext` object provides access to:
+
+- `request` - The incoming Request object
+- `params` - Route parameters from dynamic routes
+- `clientAddress` - The client's IP address
+- `site` - The site configuration
+- `url` - The request URL
+- `generator` - Astro version information
+- `cookies` - Cookie management utilities
+- `locals` - Local variables for the request
+
+## GET /edge.json
+
+Returns metadata about the current request, including client information and server context.
+
+<ParamField path="/edge.json" type="GET">
+  Edge Function endpoint that returns request metadata
+</ParamField>
+
+### Request
+
+No parameters required. Simply make a GET request to `/edge.json`.
+
+### Response
+
+<ResponseField name="time" type="string">
+  Current server timestamp
+</ResponseField>
+
+<ResponseField name="clientAddress" type="string">
+  The client's IP address
+</ResponseField>
+
+<ResponseField name="site" type="URL | undefined">
+  The site URL from Astro configuration
+</ResponseField>
+
+<ResponseField name="url" type="URL">
+  The full request URL
+</ResponseField>
+
+<ResponseField name="generator" type="string">
+  Astro version information
+</ResponseField>
+
+<ResponseField name="userAgent" type="string | null">
+  The client's User-Agent header
+</ResponseField>
+
+### Implementation
+
+Location: `src/pages/edge.json.ts`
+
+```typescript
+import type { APIContext, APIRoute } from 'astro'
+
+export const prerender = false
+
+export const GET: APIRoute = (context: APIContext) => {
+  return new Response(
+    JSON.stringify({
+      time: new Date(),
+      clientAddress: context.clientAddress,
+      site: context.site,
+      url: context.url,
+      generator: context.generator,
+      userAgent: context.request.headers.get('user-agent'),
+    }),
+    {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 's-maxage=10, stale-while-revalidate',
+      },
+    }
+  )
+}
+```
+
+### Key Features
+
+- **Edge Runtime**: Runs on Vercel Edge Functions for low latency
+- **Dynamic Rendering**: `prerender = false` ensures the route is server-rendered
+- **Caching Strategy**: Uses `s-maxage=10` with stale-while-revalidate for optimal performance
+- **Request Context**: Demonstrates accessing various APIContext properties
+
+### Example Response
+
+```json
+{
+  "time": "2026-03-10T13:45:32.123Z",
+  "clientAddress": "192.168.1.1",
+  "site": "https://astro-vercel-boilerplate.vercel.app",
+  "url": "https://astro-vercel-boilerplate.vercel.app/edge.json",
+  "generator": "Astro v4.0.0",
+  "userAgent": "Mozilla/5.0..."
+}
+```
+
+## POST /api/revalidate
+
+Triggers revalidation of cached content by tag. Used for on-demand ISR (Incremental Static Regeneration).
+
+<ParamField path="/api/revalidate" type="POST">
+  Revalidate cached content by tag
+</ParamField>
+
+### Request
+
+<ParamField body="tag" type="string" required>
+  The cache tag to revalidate
+</ParamField>
+
+### Request Body Example
+
+```json
+{
+  "tag": "blog-posts"
+}
+```
+
+### Response
+
+<ResponseField name="tag" type="string">
+  The tag that was revalidated (echoed back)
+</ResponseField>
+
+### Implementation
+
+Location: `src/pages/api/revalidate.ts`
+
+```typescript
+import type { APIRoute } from 'astro'
+
+export const prerender = false
+
+export const POST: APIRoute = async ({ request }) => {
+  const { tag } = await request.json()
+
+  return new Response(JSON.stringify(tag), {
+    status: 200,
+    headers: {
+      'Content-Type': 'application/json',
+      'x-prerender-revalidate': '115556d774a8115556d774a8115556d774a8',
+    },
+  })
+}
+```
+
+### Key Features
+
+- **On-Demand Revalidation**: Triggers cache invalidation for specific tags
+- **Bypass Token**: Uses `x-prerender-revalidate` header for authentication
+- **Async Handler**: Demonstrates async/await pattern for request body parsing
+
+### Usage Example
+
+```javascript
+// Trigger revalidation from your CMS webhook
+fetch('https://your-site.vercel.app/api/revalidate', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({ tag: 'blog-posts' })
+})
+```
+
+### Security Considerations
+
+<Accordion title="Production Implementation">
+  In production, you should:
+  
+  1. Use environment variables for the bypass token
+  2. Validate the token from request headers
+  3. Implement rate limiting
+  4. Add proper error handling
+  
+  ```typescript
+  export const POST: APIRoute = async ({ request }) => {
+    const token = request.headers.get('authorization')
+    
+    if (token !== import.meta.env.BYPASS_TOKEN) {
+      return new Response('Unauthorized', { status: 401 })
+    }
+    
+    const { tag } = await request.json()
+    
+    // Validate tag format
+    if (!tag || typeof tag !== 'string') {
+      return new Response('Bad Request', { status: 400 })
+    }
+    
+    // Implement your revalidation logic
+    return new Response(JSON.stringify({ revalidated: tag }), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'x-prerender-revalidate': import.meta.env.BYPASS_TOKEN,
+      },
+    })
+  }
+  ```
+</Accordion>
+
+## Setting Prerender Mode
+
+Both routes use `export const prerender = false` to disable static generation:
+
+```typescript
+export const prerender = false
+```
+
+This ensures:
+- Routes are server-rendered on each request
+- Access to runtime request data (headers, IP, etc.)
+- Deployment as Vercel Edge Functions
+
+## Related Resources
+
+- [Astro API Routes Documentation](https://docs.astro.build/en/guides/endpoints/)
+- [Vercel Edge Functions](https://vercel.com/docs/functions/edge-functions)
+- [ISR on Vercel](/features/isr)

@@ -1,0 +1,247 @@
+---
+title: 'Edge Functions'
+description: 'Build fast API endpoints with Vercel Edge Functions in Astro'
+---
+
+## Overview
+
+Vercel Edge Functions allow you to create API endpoints that run at the edge, close to your users. They're perfect for building dynamic APIs, handling webhooks, and processing data in real-time.
+
+<Note>
+Edge Functions run on Vercel's Edge Network using a lightweight runtime, providing low-latency responses worldwide.
+</Note>
+
+## Creating an Edge Function
+
+Create an API endpoint by exporting an HTTP method handler:
+
+```typescript title="src/pages/edge.json.ts"
+import type { APIContext, APIRoute } from 'astro'
+
+export const prerender = false
+
+export const GET: APIRoute = (context: APIContext) => {
+  return new Response(
+    JSON.stringify({
+      time: new Date(),
+      clientAddress: context.clientAddress,
+      site: context.site,
+      url: context.url,
+      generator: context.generator,
+      userAgent: context.request.headers.get('user-agent'),
+    }),
+    {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 's-maxage=10, stale-while-revalidate',
+      },
+    }
+  )
+}
+```
+
+<Tip>
+The `.json.ts` extension tells Astro this is an API endpoint that returns JSON data.
+</Tip>
+
+## APIContext
+
+The `APIContext` object provides access to request information and utilities:
+
+<CodeGroup>
+```typescript clientAddress
+// Get the client's IP address
+context.clientAddress
+```
+
+```typescript request
+// Access the full Request object
+context.request.headers.get('user-agent')
+context.request.method
+context.request.url
+```
+
+```typescript site
+// Your configured site URL
+context.site  // 'https://astro-vercel-boilerplate.vercel.app'
+```
+
+```typescript url
+// The current URL object
+context.url.pathname
+context.url.searchParams
+```
+
+```typescript params
+// Dynamic route parameters
+context.params  // e.g., { id: '123' } from /api/[id].ts
+```
+</CodeGroup>
+
+## HTTP Methods
+
+Support multiple HTTP methods by exporting handlers:
+
+```typescript title="src/pages/api/users.ts"
+import type { APIRoute } from 'astro'
+
+export const prerender = false
+
+// Handle GET requests
+export const GET: APIRoute = async (context) => {
+  const users = await fetchUsers()
+  return new Response(JSON.stringify(users), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  })
+}
+
+// Handle POST requests
+export const POST: APIRoute = async (context) => {
+  const data = await context.request.json()
+  const user = await createUser(data)
+  return new Response(JSON.stringify(user), {
+    status: 201,
+    headers: { 'Content-Type': 'application/json' },
+  })
+}
+
+// Handle DELETE requests
+export const DELETE: APIRoute = async (context) => {
+  const { id } = await context.request.json()
+  await deleteUser(id)
+  return new Response(null, { status: 204 })
+}
+```
+
+## Response Headers
+
+Control caching and content type with response headers:
+
+```typescript
+return new Response(JSON.stringify(data), {
+  status: 200,
+  headers: {
+    'Content-Type': 'application/json',
+    'Cache-Control': 's-maxage=10, stale-while-revalidate',
+    'Access-Control-Allow-Origin': '*',
+  },
+})
+```
+
+<Tabs>
+  <Tab title="Content-Type">
+    Specify the response format:
+    ```typescript
+    'Content-Type': 'application/json'
+    'Content-Type': 'text/html'
+    'Content-Type': 'text/plain'
+    ```
+  </Tab>
+  <Tab title="Cache-Control">
+    Control caching behavior:
+    ```typescript
+    's-maxage=10, stale-while-revalidate'
+    'public, max-age=3600'
+    'no-cache, no-store'
+    ```
+  </Tab>
+  <Tab title="CORS">
+    Enable cross-origin requests:
+    ```typescript
+    'Access-Control-Allow-Origin': '*'
+    'Access-Control-Allow-Methods': 'GET, POST'
+    'Access-Control-Allow-Headers': 'Content-Type'
+    ```
+  </Tab>
+</Tabs>
+
+## Dynamic Routes
+
+Create endpoints with dynamic parameters:
+
+```typescript title="src/pages/api/users/[id].ts"
+import type { APIRoute } from 'astro'
+
+export const prerender = false
+
+export const GET: APIRoute = async (context) => {
+  const { id } = context.params
+  const user = await fetchUser(id)
+  
+  if (!user) {
+    return new Response(JSON.stringify({ error: 'User not found' }), {
+      status: 404,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
+  
+  return new Response(JSON.stringify(user), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  })
+}
+```
+
+## Error Handling
+
+Handle errors gracefully with appropriate status codes:
+
+```typescript
+export const POST: APIRoute = async (context) => {
+  try {
+    const data = await context.request.json()
+    
+    // Validate input
+    if (!data.email) {
+      return new Response(
+        JSON.stringify({ error: 'Email is required' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    const result = await createUser(data)
+    return new Response(JSON.stringify(result), {
+      status: 201,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  } catch (error) {
+    return new Response(
+      JSON.stringify({ error: 'Internal server error' }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    )
+  }
+}
+```
+
+<Warning>
+Always validate input and handle errors to prevent exposing sensitive information.
+</Warning>
+
+## Performance Benefits
+
+- **Global Distribution**: Edge Functions run on Vercel's global network
+- **Low Latency**: Execution close to users reduces response time
+- **Auto-Scaling**: Automatically scales based on traffic
+- **Lightweight Runtime**: Fast cold starts and efficient execution
+
+## Use Cases
+
+- **API Endpoints**: Build RESTful APIs for your application
+- **Webhooks**: Handle incoming webhooks from third-party services
+- **Data Transformation**: Process and transform data on-the-fly
+- **Authentication**: Validate tokens and manage sessions
+- **Proxying**: Forward requests to external APIs with custom logic
+- **Real-time Data**: Fetch and return fresh data on each request
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Middleware" icon="filter" href="/features/middleware">
+    Add middleware to process requests
+  </Card>
+  <Card title="ISR" icon="refresh" href="/features/isr">
+    Combine with ISR for cached API responses
+  </Card>
+</CardGroup>

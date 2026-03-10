@@ -1,0 +1,138 @@
+---
+title: 'Server-Side Rendering (SSR)'
+description: 'Learn how to implement server-side rendering with Vercel Edge Functions in Astro'
+---
+
+## Overview
+
+Server-Side Rendering (SSR) allows you to generate pages dynamically on each request using Vercel Edge Functions. This enables real-time data, personalized content, and access to request context like headers and geolocation.
+
+<Note>
+SSR pages are executed at the edge, close to your users, providing fast response times while maintaining dynamic capabilities.
+</Note>
+
+## Enabling SSR
+
+To enable SSR for a page, set `prerender` to `false` in the page's frontmatter:
+
+```astro title="src/pages/ssr.astro"
+---
+import Layout from '@/layouts/Layout.astro'
+
+export const prerender = false
+
+const time = new Date().toLocaleTimeString()
+---
+
+<Layout
+  seo={{
+    title: 'Server-Side Rendering (SSR)',
+    description: 'A page that uses server-side rendering (through Vercel Edge Functions)',
+  }}>
+  <section>
+    <hgroup>
+      <h2>Server-Side Rendering (SSR)</h2>
+      <p>A page that uses server-side rendering (through Vercel Edge Functions)</p>
+    </hgroup>
+
+    <h1>{time}</h1>
+
+    <a href="/ssr">Refresh</a>
+  </section>
+</Layout>
+```
+
+## Accessing Request Headers
+
+SSR pages have access to the full request context, including headers. This is useful for personalization based on geolocation, user agent, or custom headers:
+
+```astro title="src/pages/index.astro"
+---
+export const prerender = false
+
+const ip = Astro.request.headers.get('x-real-ip')
+const city = decodeURIComponent(Astro.request.headers.get('x-vercel-ip-city')!)
+---
+
+<Layout>
+  <main>
+    <h1>Astro in <span class="text-gradient">Vercel</span></h1>
+    <div class="banner">
+      <p>Your city<br /><strong>{city}</strong></p>
+      <p>Your IP address<br /><strong>{ip}</strong></p>
+    </div>
+  </main>
+</Layout>
+```
+
+### Available Request Headers
+
+<Card title="Vercel Edge Network Headers" icon="globe">
+- `x-real-ip` - The client's IP address
+- `x-vercel-ip-city` - The city of the client
+- `x-vercel-ip-country` - The country code of the client
+- `x-vercel-ip-latitude` - The latitude of the client
+- `x-vercel-ip-longitude` - The longitude of the client
+</Card>
+
+## Performance Benefits
+
+<Tabs>
+  <Tab title="Edge Execution">
+    SSR pages run on Vercel's Edge Network, which means:
+    - Execution close to users worldwide
+    - Low latency responses
+    - Global distribution without additional configuration
+  </Tab>
+  <Tab title="Dynamic Content">
+    Unlike static pages, SSR enables:
+    - Real-time data fetching
+    - Personalized content per request
+    - Access to request context (cookies, headers, IP)
+  </Tab>
+  <Tab title="Scalability">
+    Vercel Edge Functions automatically:
+    - Scale based on traffic
+    - Handle high request volumes
+    - Provide consistent performance
+  </Tab>
+</Tabs>
+
+## Configuration
+
+SSR is enabled in your Astro config with the Vercel adapter:
+
+```javascript title="astro.config.mjs"
+import vercel from '@astrojs/vercel'
+import { defineConfig } from 'astro/config'
+
+export default defineConfig({
+  output: 'server',
+  adapter: vercel({
+    edgeMiddleware: true,
+  }),
+})
+```
+
+<Tip>
+You can mix static and SSR pages in the same project. Pages with `prerender: false` will use SSR, while others remain static.
+</Tip>
+
+## Use Cases
+
+- **Personalization**: Display content based on user location, preferences, or authentication
+- **Real-time Data**: Show live prices, availability, or status updates
+- **A/B Testing**: Serve different variants based on request parameters
+- **Authentication**: Check session cookies and protect routes
+- **Dynamic API Responses**: Create endpoints that return fresh data on each request
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="ISR" icon="refresh" href="/features/isr">
+    Combine static generation with on-demand revalidation
+  </Card>
+  <Card title="Edge Functions" icon="bolt" href="/features/edge-functions">
+    Build API endpoints with Edge Functions
+  </Card>
+</CardGroup>

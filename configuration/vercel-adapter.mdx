@@ -1,0 +1,281 @@
+---
+title: Vercel Adapter Configuration
+description: Complete guide to configuring the @astrojs/vercel adapter for deployment
+---
+
+The `@astrojs/vercel` adapter enables your Astro project to deploy on Vercel with full SSR (Server-Side Rendering) and edge capabilities.
+
+## Installation
+
+The adapter is already included in this boilerplate. To install it in a new project:
+
+```bash
+npm install @astrojs/vercel
+```
+
+```bash
+bun add @astrojs/vercel
+```
+
+### Required Dependencies
+
+From `package.json`, the key dependencies are:
+
+```json package.json
+{
+  "dependencies": {
+    "@astrojs/vercel": "^9.0.4",
+    "@vercel/analytics": "^1.6.1",
+    "@vercel/speed-insights": "^1.3.1",
+    "astro": "^5.16.11"
+  }
+}
+```
+
+## Basic Configuration
+
+The adapter is configured in `astro.config.mjs`. Here's the complete configuration from this boilerplate:
+
+```javascript astro.config.mjs
+import vercel from '@astrojs/vercel'
+import { defineConfig } from 'astro/config'
+
+export default defineConfig({
+  site: 'https://astro-vercel-boilerplate.vercel.app',
+  trailingSlash: 'never',
+  output: 'server',
+  adapter: vercel({
+    edgeMiddleware: true,
+    imageService: true,
+    imagesConfig: {
+      sizes: [320, 640, 1280],
+      domains: [],
+      remotePatterns: [
+        {
+          protocol: 'https',
+        },
+      ],
+    },
+    webAnalytics: {
+      enabled: true,
+    },
+    isr: {
+      expiration: 60 * 60 * 24,
+      bypassToken: '115556d774a8115556d774a8115556d774a8s',
+      exclude: ['/api/revalidate', '/ssr', '/edge.json'],
+    },
+  }),
+})
+```
+
+## Configuration Options
+
+### Output Mode
+
+<ParamField path="output" type="string" required>
+  Set to `'server'` to enable SSR (Server-Side Rendering) for your entire site.
+  
+  ```javascript
+  output: 'server'
+  ```
+  
+  <Note>
+    Individual pages can opt-in to static rendering by setting `export const prerender = true` in the page frontmatter.
+  </Note>
+</ParamField>
+
+### Edge Middleware
+
+<ParamField path="edgeMiddleware" type="boolean" default="false">
+  Enables edge middleware support for running code on Vercel's Edge Network.
+  
+  ```javascript
+  edgeMiddleware: true
+  ```
+  
+  When enabled, your `src/middleware.ts` file will run on the edge, allowing you to:
+  - Intercept requests before they reach your pages
+  - Modify responses
+  - Add custom headers
+  - Implement authentication logic
+</ParamField>
+
+### Image Service
+
+<ParamField path="imageService" type="boolean" default="false">
+  Enables Vercel's Image Optimization service for automatic image processing.
+  
+  ```javascript
+  imageService: true
+  ```
+</ParamField>
+
+### Images Configuration
+
+<Accordion title="imagesConfig Options">
+  <ParamField path="imagesConfig.sizes" type="number[]">
+    Array of image widths to generate. These should match your responsive breakpoints.
+    
+    ```javascript
+    sizes: [320, 640, 1280]
+    ```
+  </ParamField>
+  
+  <ParamField path="imagesConfig.domains" type="string[]">
+    Allowed external domains for image optimization. Leave empty to allow all domains.
+    
+    ```javascript
+    domains: []
+    ```
+  </ParamField>
+  
+  <ParamField path="imagesConfig.remotePatterns" type="object[]">
+    Fine-grained control over allowed remote image sources using pattern matching.
+    
+    ```javascript
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '^via\\.placeholder\\.com$',
+        pathname: '^/1280x640/.*$',
+      },
+    ]
+    ```
+    
+    <Note>
+      Use regex patterns for hostname and pathname to match specific URLs.
+    </Note>
+  </ParamField>
+</Accordion>
+
+### Web Analytics
+
+<ParamField path="webAnalytics.enabled" type="boolean" default="false">
+  Enables Vercel Web Analytics for tracking page views and performance metrics.
+  
+  ```javascript
+  webAnalytics: {
+    enabled: true,
+  }
+  ```
+  
+  <Note>
+    This requires Vercel Web Analytics to be enabled in your Vercel project settings.
+  </Note>
+</ParamField>
+
+### Incremental Static Regeneration (ISR)
+
+<Accordion title="ISR Configuration Options">
+  ISR allows you to update static pages without rebuilding your entire site.
+  
+  <ParamField path="isr" type="boolean | object">
+    Enable ISR with `true` for default settings, or use an object for advanced configuration.
+    
+    ```javascript
+    // Simple enable
+    isr: true
+    
+    // Advanced configuration
+    isr: {
+      expiration: 60 * 60 * 24,
+      bypassToken: 'your-secret-token',
+      exclude: ['/api/*', '/ssr'],
+    }
+    ```
+  </ParamField>
+  
+  <ParamField path="isr.expiration" type="number">
+    Time in seconds before a page is regenerated. Default is 1 day (86400 seconds).
+    
+    ```javascript
+    expiration: 60 * 60 * 24 // 24 hours
+    ```
+  </ParamField>
+  
+  <ParamField path="isr.bypassToken" type="string">
+    A secret token to bypass the cache and force regeneration.
+    
+    ```javascript
+    bypassToken: '115556d774a8115556d774a8115556d774a8s'
+    ```
+    
+    <Warning>
+      Keep this token secret! Anyone with this token can force cache invalidation.
+    </Warning>
+    
+    Use it in a URL like:
+    ```
+    https://your-site.com/page?__prerender_bypass=your-token
+    ```
+  </ParamField>
+  
+  <ParamField path="isr.exclude" type="string[]">
+    Routes that should always be served fresh (never cached).
+    
+    ```javascript
+    exclude: ['/api/revalidate', '/ssr', '/edge.json']
+    ```
+  </ParamField>
+</Accordion>
+
+## Development vs Production
+
+<Accordion title="Development Image Service">
+  During development, you can use a different image service:
+  
+  ```javascript
+  adapter: vercel({
+    devImageService: 'squoosh',
+    imageService: true,
+  })
+  ```
+  
+  This uses the lighter Squoosh service locally while Vercel's optimization is used in production.
+</Accordion>
+
+## Example: Page with ISR
+
+To use ISR on a specific page:
+
+```astro src/pages/isr.astro
+---
+export const prerender = true // Enable static generation for ISR
+
+const data = await fetch('https://api.example.com/data')
+const content = await data.json()
+---
+
+<Layout>
+  <h1>This page uses ISR</h1>
+  <p>Content will refresh every 24 hours</p>
+  {/* Use your data here */}
+</Layout>
+```
+
+## Vercel CLI Scripts
+
+The boilerplate includes helpful Vercel CLI commands:
+
+```json package.json
+{
+  "scripts": {
+    "vercel:dev": "vercel dev",
+    "vercel:link": "vercel link"
+  }
+}
+```
+
+- **vercel:dev** - Run the project locally with Vercel's development environment
+- **vercel:link** - Link your local project to a Vercel project
+
+<Note>
+  Install the Vercel CLI globally with `npm i -g vercel` to use these commands.
+</Note>
+
+## Related Resources
+
+- [Astro Vercel Adapter Documentation](https://docs.astro.build/en/guides/integrations-guide/vercel/)
+- [Vercel Image Optimization](https://vercel.com/docs/image-optimization)
+- [Vercel Edge Functions](https://vercel.com/docs/functions/edge-functions)
+- [Incremental Static Regeneration](https://vercel.com/docs/incremental-static-regeneration)

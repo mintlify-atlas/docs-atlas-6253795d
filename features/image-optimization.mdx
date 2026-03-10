@@ -1,0 +1,279 @@
+---
+title: 'Image Optimization'
+description: 'Optimize images automatically with Vercel Image Optimization in Astro'
+---
+
+## Overview
+
+Vercel Image Optimization automatically optimizes images on-demand, serving them in modern formats like WebP with the right size for each device. This improves performance without manual image processing.
+
+<Note>
+Images are optimized at the edge and cached globally, providing fast load times for users worldwide.
+</Note>
+
+## Configuration
+
+Enable image optimization in your Astro config:
+
+```javascript title="astro.config.mjs"
+import vercel from '@astrojs/vercel'
+import { defineConfig } from 'astro/config'
+
+export default defineConfig({
+  adapter: vercel({
+    imageService: true,
+    imagesConfig: {
+      sizes: [320, 640, 1280],
+      domains: [],
+      remotePatterns: [
+        {
+          protocol: 'https',
+        },
+      ],
+    },
+  }),
+})
+```
+
+### Configuration Options
+
+<CodeGroup>
+```javascript imageService
+// Enable Vercel Image Optimization
+imageService: true
+```
+
+```javascript sizes
+// Define responsive image sizes
+sizes: [320, 640, 1280]
+```
+
+```javascript domains
+// Allow specific external domains
+domains: ['example.com', 'cdn.example.com']
+```
+
+```javascript remotePatterns
+// Allow images from remote URLs matching patterns
+remotePatterns: [
+  {
+    protocol: 'https',
+    hostname: 'cdn.example.com',
+    pathname: '/images/**',
+  },
+]
+```
+</CodeGroup>
+
+## Using the Image Component
+
+Import and use the Astro Image component:
+
+```astro title="src/pages/image.astro"
+---
+import { Image as AstroImage } from 'astro:assets'
+import imageDark from '@/assets/images/context-menu-dark.jpg'
+import imageLight from '@/assets/images/context-menu-light.jpg'
+import Layout from '@/layouts/Layout.astro'
+---
+
+<Layout seo={{ title: 'Image', description: 'Astro Asset using Vercel Image Optimization' }}>
+  <section>
+    <hgroup>
+      <h2>Image Optimization</h2>
+      <p>Astro Asset using Vercel Image Optimization</p>
+    </hgroup>
+    <AstroImage
+      src={imageLight}
+      alt="Light Screenshot"
+      width={imageLight.width}
+      height={imageLight.height}
+      format={'webp'}
+      quality={80}
+      class="light"
+    />
+    <AstroImage
+      src={imageDark}
+      alt="Dark Screenshot"
+      width={imageLight.width}
+      height={imageLight.height}
+      format={'webp'}
+      quality={80}
+      class="dark"
+    />
+  </section>
+</Layout>
+```
+
+## Image Formats
+
+Vercel automatically serves images in optimal formats:
+
+<Tabs>
+  <Tab title="WebP">
+    Modern format with excellent compression:
+    ```astro
+    <AstroImage
+      src={image}
+      format="webp"
+      quality={80}
+    />
+    ```
+  </Tab>
+  <Tab title="AVIF">
+    Next-gen format with superior compression:
+    ```astro
+    <AstroImage
+      src={image}
+      format="avif"
+      quality={80}
+    />
+    ```
+  </Tab>
+  <Tab title="Auto">
+    Let Vercel choose the best format:
+    ```astro
+    <AstroImage
+      src={image}
+      format="auto"
+    />
+    ```
+  </Tab>
+</Tabs>
+
+## Quality Settings
+
+Control image quality to balance file size and visual quality:
+
+```astro
+<!-- High quality for hero images -->
+<AstroImage src={hero} quality={90} />
+
+<!-- Balanced quality for content images -->
+<AstroImage src={content} quality={80} />
+
+<!-- Lower quality for thumbnails -->
+<AstroImage src={thumb} quality={60} />
+```
+
+<Tip>
+A quality setting of 75-85 typically provides the best balance between file size and visual quality.
+</Tip>
+
+## Responsive Images
+
+Define multiple sizes for responsive images:
+
+```astro
+<AstroImage
+  src={image}
+  widths={[320, 640, 1280]}
+  sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 1280px"
+  alt="Responsive image"
+/>
+```
+
+The browser automatically selects the appropriate size based on the viewport and device pixel ratio.
+
+## Local Images
+
+Import and optimize local images:
+
+```astro
+---
+import { Image } from 'astro:assets'
+import myImage from '../assets/my-image.jpg'
+---
+
+<Image
+  src={myImage}
+  alt="My image"
+  width={800}
+  height={600}
+  format="webp"
+  quality={80}
+/>
+```
+
+<Note>
+Local images are automatically processed at build time and optimized for production.
+</Note>
+
+## Remote Images
+
+Optimize images from external sources:
+
+```astro
+<Image
+  src="https://example.com/image.jpg"
+  alt="Remote image"
+  width={800}
+  height={600}
+  format="webp"
+/>
+```
+
+<Warning>
+Remote images must be from domains listed in `domains` or match a pattern in `remotePatterns` in your config.
+</Warning>
+
+## Theme-Aware Images
+
+Show different images based on color scheme:
+
+```astro
+<AstroImage
+  src={imageLight}
+  alt="Light mode"
+  class="light"
+/>
+<AstroImage
+  src={imageDark}
+  alt="Dark mode"
+  class="dark"
+/>
+
+<style>
+  @media (prefers-color-scheme: light) {
+    img.dark {
+      display: none;
+    }
+  }
+  @media (prefers-color-scheme: dark) {
+    img.light {
+      display: none;
+    }
+  }
+</style>
+```
+
+## Performance Benefits
+
+- **Automatic Format Selection**: Serves WebP/AVIF to supporting browsers
+- **Responsive Sizing**: Generates multiple sizes for different viewports
+- **Lazy Loading**: Images load as they enter the viewport
+- **CDN Caching**: Optimized images are cached globally
+- **On-Demand Processing**: Images are optimized only when requested
+
+## Best Practices
+
+1. **Always specify dimensions**: Prevents layout shift
+2. **Use appropriate quality**: 75-85 for most images
+3. **Choose the right format**: WebP for general use, AVIF for maximum compression
+4. **Enable lazy loading**: Improves initial page load
+5. **Optimize for mobile**: Include smaller sizes in responsive configuration
+
+<Tip>
+Use the Network tab in browser DevTools to verify images are being served in optimized formats.
+</Tip>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Analytics" icon="chart-line" href="/features/analytics">
+    Monitor image loading performance
+  </Card>
+  <Card title="SSR" icon="server" href="/features/ssr">
+    Combine with SSR for dynamic images
+  </Card>
+</CardGroup>

@@ -1,0 +1,441 @@
+---
+title: Project Setup
+description: Understanding the project structure, configuration, and development workflow
+---
+
+This guide explains the project structure, configuration files, and how to set up your development environment.
+
+## Project Structure
+
+The boilerplate follows Astro's standard directory structure:
+
+```
+astro-vercel-boilerplate/
+├── public/              # Static assets served as-is
+├── src/
+│   ├── assets/         # Optimized assets (images, styles, scripts)
+│   │   ├── images/
+│   │   ├── scripts/
+│   │   └── styles/
+│   ├── components/     # Reusable Astro components
+│   ├── data/           # Configuration and data files
+│   ├── layouts/        # Page layout templates
+│   ├── lib/            # Utility functions and helpers
+│   └── pages/          # File-based routing
+│       └── api/        # API endpoints
+├── astro.config.mjs    # Astro configuration
+├── tsconfig.json       # TypeScript configuration
+└── package.json        # Dependencies and scripts
+```
+
+### Directory Details
+
+<Accordion title="src/pages/ - File-based Routing">
+  Astro uses file-based routing. Each `.astro`, `.md`, or `.ts` file in `src/pages/` becomes a route:
+  
+  - `src/pages/index.astro` → `/`
+  - `src/pages/ssr.astro` → `/ssr`
+  - `src/pages/isr.astro` → `/isr`
+  - `src/pages/api/revalidate.ts` → `/api/revalidate`
+  
+  **Example page** (src/pages/index.astro:1):
+  ```astro
+  ---
+  import Layout from '@/layouts/Layout.astro'
+  import Card from '@/components/Card.astro'
+  
+  export const prerender = false // Enable SSR for this page
+  
+  const ip = Astro.request.headers.get('x-real-ip')
+  const city = decodeURIComponent(Astro.request.headers.get('x-vercel-ip-city')!)
+  ---
+  
+  <Layout>
+    <h1>Astro in <span class="text-gradient">Vercel</span></h1>
+    <div class="banner">
+      <p>Your city<br /><strong>{city}</strong></p>
+      <p>Your IP address<br /><strong>{ip}</strong></p>
+    </div>
+  </Layout>
+  ```
+</Accordion>
+
+<Accordion title="src/components/ - Reusable Components">
+  Store reusable Astro components here:
+  
+  - `Card.astro` - Card component for content display
+  - `Header.astro` - Site header with navigation
+  - `Footer.astro` - Site footer
+  - `SEO.astro` - SEO meta tags component
+  
+  Components can be imported using the `@/` path alias:
+  ```astro
+  import Card from '@/components/Card.astro'
+  ```
+</Accordion>
+
+<Accordion title="src/layouts/ - Page Templates">
+  Layout components wrap your pages with common structure.
+  
+  **Main Layout** (src/layouts/Layout.astro:1):
+  ```astro
+  ---
+  import type { Props as SEOProps } from 'astro-seo'
+  import SpeedInsights from '@vercel/speed-insights/astro'
+  import { ClientRouter } from 'astro:transitions'
+  import Footer from '@/components/Footer.astro'
+  import Header from '@/components/Header.astro'
+  import SEO from '@/components/SEO.astro'
+  import '@fontsource-variable/inter'
+  import '@picocss/pico/css/pico.orange.min.css'
+  
+  interface Props {
+    seo?: SEOProps
+  }
+  
+  const { seo } = Astro.props
+  ---
+  
+  <!doctype html>
+  <html lang="en">
+    <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width" />
+      <SEO {seo} />
+      <ClientRouter />
+      <SpeedInsights />
+    </head>
+    <body>
+      <Header />
+      <main class="container">
+        <slot />
+      </main>
+      <Footer />
+    </body>
+  </html>
+  ```
+</Accordion>
+
+<Accordion title="src/middleware.ts - Request Middleware">
+  Middleware runs on every request when `edgeMiddleware: true` is configured.
+  
+  **Example middleware** (src/middleware.ts:1):
+  ```typescript
+  import type { APIContext, MiddlewareNext } from 'astro'
+  import { defineMiddleware } from 'astro:middleware'
+  
+  export const onRequest = defineMiddleware((context: APIContext, next: MiddlewareNext) => {
+    // Intercept and log requests
+    console.log(context.url.href)
+    
+    // Optionally modify context.locals
+    // context.locals.user = await getUser(context.cookies)
+    
+    return next()
+  })
+  ```
+  
+  <Note>
+    Middleware runs on Vercel's Edge Network when `edgeMiddleware: true` is set in the adapter config.
+  </Note>
+</Accordion>
+
+<Accordion title="public/ - Static Assets">
+  Files in `public/` are served as-is without processing:
+  
+  - `favicon.svg` - Site favicon
+  - `pico-mark-dark.svg` - Dark mode logo
+  - `pico-mark-light.svg` - Light mode logo  
+  - `open-graph.jpg` - Social media preview image
+  - `preview.png` - Project preview image
+  - `modal.js` - Client-side JavaScript
+  
+  Access these files from the root path:
+  ```html
+  <img src="/favicon.svg" alt="Logo" />
+  ```
+</Accordion>
+
+## TypeScript Configuration
+
+The project uses TypeScript with path aliases for clean imports:
+
+```json tsconfig.json
+{
+  "extends": "astro/tsconfigs/strict",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    }
+  },
+  "include": [".astro/types.d.ts", "**/*"],
+  "exclude": ["dist"]
+}
+```
+
+### Path Aliases
+
+Use `@/` to import from the `src/` directory:
+
+```typescript
+// Instead of:
+import Layout from '../layouts/Layout.astro'
+import Card from '../components/Card.astro'
+
+// Use:
+import Layout from '@/layouts/Layout.astro'
+import Card from '@/components/Card.astro'
+```
+
+## Package Scripts
+
+The `package.json` includes these development scripts:
+
+```json package.json
+{
+  "scripts": {
+    "dev": "astro dev",
+    "start": "astro dev",
+    "build": "astro check && astro build",
+    "preview": "astro preview",
+    "check": "astro check",
+    "lint": "bun eslint --fix .",
+    "format": "bun prettier --write --list-different .",
+    "vercel:dev": "vercel dev",
+    "vercel:link": "vercel link"
+  }
+}
+```
+
+### Script Descriptions
+
+<ParamField path="dev" type="command">
+  Start the development server at `http://localhost:4321`
+  
+  ```bash
+  bun run dev
+  ```
+</ParamField>
+
+<ParamField path="build" type="command">
+  Type-check the project and build for production
+  
+  ```bash
+  bun run build
+  ```
+  
+  <Note>
+    This runs `astro check` first to catch TypeScript errors before building.
+  </Note>
+</ParamField>
+
+<ParamField path="preview" type="command">
+  Preview the production build locally
+  
+  ```bash
+  bun run preview
+  ```
+</ParamField>
+
+<ParamField path="check" type="command">
+  Run TypeScript type checking without building
+  
+  ```bash
+  bun run check
+  ```
+</ParamField>
+
+<ParamField path="lint" type="command">
+  Lint and auto-fix code with ESLint
+  
+  ```bash
+  bun run lint
+  ```
+</ParamField>
+
+<ParamField path="format" type="command">
+  Format code with Prettier
+  
+  ```bash
+  bun run format
+  ```
+</ParamField>
+
+<ParamField path="vercel:dev" type="command">
+  Run the development server with Vercel's local environment
+  
+  ```bash
+  bun run vercel:dev
+  ```
+  
+  <Note>
+    Requires the Vercel CLI: `npm i -g vercel`
+  </Note>
+</ParamField>
+
+<ParamField path="vercel:link" type="command">
+  Link your local project to a Vercel project
+  
+  ```bash
+  bun run vercel:link
+  ```
+</ParamField>
+
+## Site Configuration
+
+Store site-wide configuration in `src/data/config.ts`:
+
+```typescript src/data/config.ts
+export const SITE = {
+  title: 'Astro on Vercel',
+  description: "Learn how to use Vercel's features with Astro",
+  image: '/open-graph.jpg',
+  url: 'https://astro-vercel-boilerplate.vercel.app',
+}
+```
+
+Import and use it in your components:
+
+```astro
+---
+import { SITE } from '@/data/config'
+---
+
+<SEO
+  title={SITE.title}
+  description={SITE.description}
+  openGraph={{
+    basic: {
+      title: SITE.title,
+      type: 'website',
+      image: SITE.image,
+    }
+  }}
+/>
+```
+
+## Custom Domain Setup
+
+### In Vercel Dashboard
+
+1. Go to your project settings on Vercel
+2. Navigate to **Domains**
+3. Add your custom domain
+4. Follow Vercel's instructions to configure DNS
+
+### Update Configuration
+
+Update the `site` URL in `astro.config.mjs`:
+
+```javascript astro.config.mjs
+export default defineConfig({
+  site: 'https://yourdomain.com', // Update this
+  // ... rest of config
+})
+```
+
+And in `src/data/config.ts`:
+
+```typescript src/data/config.ts
+export const SITE = {
+  // ...
+  url: 'https://yourdomain.com', // Update this
+}
+```
+
+## Development Workflow
+
+### 1. Start Development Server
+
+```bash
+bun run dev
+```
+
+The site will be available at `http://localhost:4321`
+
+### 2. Make Changes
+
+Edit files in `src/` - the dev server will hot-reload automatically.
+
+### 3. Type Checking
+
+```bash
+bun run check
+```
+
+### 4. Lint and Format
+
+```bash
+bun run lint
+bun run format
+```
+
+### 5. Build for Production
+
+```bash
+bun run build
+```
+
+### 6. Preview Production Build
+
+```bash
+bun run preview
+```
+
+### 7. Deploy to Vercel
+
+```bash
+vercel
+```
+
+Or push to your connected Git repository for automatic deployment.
+
+<Note>
+  Connect your GitHub repository to Vercel for automatic deployments on every push to your main branch.
+</Note>
+
+## Environment Variables
+
+Create a `.env` file in the project root:
+
+```bash .env
+PUBLIC_API_URL=https://api.example.com
+SECRET_API_KEY=your-secret-key
+```
+
+### Using Environment Variables
+
+```astro
+---
+// Public variables (exposed to the browser)
+const apiUrl = import.meta.env.PUBLIC_API_URL
+
+// Private variables (server-side only)
+const apiKey = import.meta.env.SECRET_API_KEY
+---
+```
+
+<Warning>
+  Only variables prefixed with `PUBLIC_` are exposed to the browser. Never put secrets in `PUBLIC_` variables!
+</Warning>
+
+### Vercel Environment Variables
+
+Add environment variables in your Vercel project settings:
+
+1. Go to **Settings** → **Environment Variables**
+2. Add your variables for each environment (Production, Preview, Development)
+3. Redeploy for changes to take effect
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Vercel Adapter" icon="vercel" href="/configuration/vercel-adapter">
+    Configure the Vercel adapter options
+  </Card>
+  
+  <Card title="Deployment" icon="rocket" href="/deployment">
+    Deploy your project to Vercel
+  </Card>
+</CardGroup>

@@ -1,0 +1,492 @@
+---
+title: 'Components'
+description: 'Reference documentation for Astro components in the Vercel Boilerplate'
+---
+
+This boilerplate includes reusable Astro components for common UI elements and layout. All components are located in `src/components/` and `src/layouts/`.
+
+## Card Component
+
+A reusable card component for displaying content with optional header, footer, and links.
+
+### Props
+
+<ParamField path="header" type="string" optional>
+  The card's header text (rendered as an h3)
+</ParamField>
+
+<ParamField path="footer" type="string" optional>
+  The card's footer text
+</ParamField>
+
+<ParamField path="href" type="string" optional>
+  URL for the card link
+</ParamField>
+
+<ParamField path="target" type="'_self' | '_blank'" optional default="_self">
+  Link target attribute
+</ParamField>
+
+### Component Code
+
+Location: `src/components/Card.astro`
+
+```astro
+---
+interface Props {
+  header?: string
+  footer?: string
+  href?: string
+  target?: '_self' | '_blank'
+}
+
+const { header, footer, href, target } = Astro.props
+---
+
+<article>
+  {
+    header && (
+      <header class="text-xl font-black">
+        <h3>
+          {target === '_blank' ? (
+            <a href={href} target="_blank">
+              {header}
+            </a>
+          ) : (
+            <a href={href}>{header}</a>
+          )}
+        </h3>
+      </header>
+    )
+  }
+  <slot />
+  {footer && <footer>{footer}</footer>}
+</article>
+```
+
+### Usage Example
+
+```astro
+import Card from '@/components/Card.astro'
+
+<Card header="/ssr" href="/ssr">
+  A page that uses server-side rendering
+</Card>
+
+<Card header="Documentation" href="https://docs.astro.build" target="_blank">
+  Learn more about Astro in the official documentation.
+</Card>
+
+<Card header="Feature" footer="Added in v1.0">
+  This card has both a header and footer.
+</Card>
+```
+
+### Where It's Used
+
+- `src/pages/index.astro:20-38` - Used to showcase different Vercel features (SSR, ISR, Edge Functions, Image Optimization)
+
+## Footer Component
+
+The site footer with navigation links and attribution.
+
+### Props
+
+No props - this is a static component.
+
+### Component Code
+
+Location: `src/components/Footer.astro`
+
+```astro
+<footer class="container">
+  <hr />
+  <nav>
+    <small>
+      Learn more about <a
+        href="https://vercel.com/docs/frameworks/astro"
+        rel="nofollow"
+        target="_blank">Astro on Vercel</a
+      >
+    </small>
+    <small>
+      Built with <a href="https://astro.build" target="_blank">Astro</a> & <a
+        href="https://picocss.com/"
+        target="_blank">Pico</a
+      >
+    </small>
+  </nav>
+</footer>
+```
+
+### Usage Example
+
+```astro
+import Footer from '@/components/Footer.astro'
+
+<Footer />
+```
+
+### Where It's Used
+
+- `src/layouts/Layout.astro:39` - Included in the main layout
+
+### Features
+
+- Links to Astro on Vercel documentation
+- Attribution for Astro and Pico CSS
+- Uses Pico CSS container and navigation styles
+
+## Header Component
+
+The site header with logo images that adapt to light/dark mode.
+
+### Props
+
+No props - this is a static component.
+
+### Component Code
+
+Location: `src/components/Header.astro`
+
+```astro
+---
+import { Image } from 'astro:assets'
+import astroLogoDark from '@/assets/images/astro-logo-dark.svg'
+import astroLogoLight from '@/assets/images/astro-logo-light.svg'
+import vercelLogoDark from '@/assets/images/vercel-logo-dark.svg'
+import vercelLogoLight from '@/assets/images/vercel-logo-light.svg'
+---
+
+<header class="container">
+  <nav>
+    <ul>
+      <li>
+        <a href="/" title="Astro on Vercel">
+          <h2>Astro on Vercel</h2>
+          <Image
+            src={astroLogoLight}
+            width={astroLogoLight.width}
+            height={astroLogoLight.height}
+            loading={'eager'}
+            alt="Astro light logo"
+            class="light"
+          />
+          <Image
+            src={astroLogoDark}
+            width={astroLogoDark.width}
+            height={astroLogoDark.height}
+            loading={'eager'}
+            alt="Astro dark logo"
+            class="dark"
+          />
+        </a>
+        <a href="/" title="Astro on Vercel">
+          <Image
+            src={vercelLogoLight}
+            width={vercelLogoLight.width}
+            height={vercelLogoLight.height}
+            loading={'eager'}
+            alt="Vercel light logo"
+            class="light"
+          />
+          <Image
+            src={vercelLogoDark}
+            width={vercelLogoDark.width}
+            height={vercelLogoDark.height}
+            loading={'eager'}
+            alt="Vercel dark logo"
+            class="dark"
+          />
+        </a>
+      </li>
+    </ul>
+  </nav>
+  <hr />
+</header>
+```
+
+### Usage Example
+
+```astro
+import Header from '@/components/Header.astro'
+
+<Header />
+```
+
+### Where It's Used
+
+- `src/layouts/Layout.astro:35` - Included in the main layout
+
+### Features
+
+- **Theme-Aware Logos**: Displays different logos based on `prefers-color-scheme`
+- **Optimized Images**: Uses Astro's built-in Image component for optimization
+- **Eager Loading**: Logos are loaded immediately for better perceived performance
+- **Responsive Design**: Adapts logo size for mobile devices (120px on screens < 768px)
+
+<Accordion title="Theme-Aware Styling">
+  The component uses CSS media queries to show/hide logos based on the user's color scheme preference:
+  
+  ```css
+  @media (prefers-color-scheme: light) {
+    img.light {
+      display: none;
+    }
+  }
+  @media (prefers-color-scheme: dark) {
+    img.dark {
+      display: none;
+    }
+  }
+  ```
+  
+  This ensures only the appropriate logo variant is displayed without JavaScript.
+</Accordion>
+
+## SEO Component
+
+Manages meta tags, Open Graph, and Twitter Card data for SEO.
+
+### Props
+
+<ParamField path="seo" type="SEOProps" optional>
+  SEO configuration object from astro-seo
+</ParamField>
+
+<ParamField path="seo.title" type="string" optional>
+  Page title (appended with site title)
+</ParamField>
+
+<ParamField path="seo.description" type="string" optional>
+  Page description (falls back to SITE.description)
+</ParamField>
+
+### Component Code
+
+Location: `src/components/SEO.astro`
+
+```astro
+---
+import type { Props as SEOProps } from 'astro-seo'
+import { SEO as AstroSEO } from 'astro-seo'
+import { SITE } from '@/data/config'
+
+interface Props {
+  seo?: SEOProps
+}
+
+const { seo } = Astro.props
+---
+
+<AstroSEO
+  titleTemplate=`%s | ${SITE.title}`
+  titleDefault={SITE.title}
+  title={seo?.title}
+  description={seo?.description || SITE.description}
+  openGraph={{
+    basic: {
+      title: seo?.title || SITE.title,
+      type: 'website',
+      image: SITE.image || '/open-graph.jpg',
+      url: SITE.url,
+    },
+    optional: {
+      description: seo?.description || SITE.description,
+      siteName: SITE.title,
+    },
+  }}
+  twitter={{
+    card: 'summary_large_image',
+    title: seo?.title || SITE.title,
+    description: seo?.description || SITE.description,
+    image: SITE.image || '/open-graph.jpg',
+  }}
+  {...seo}
+/>
+```
+
+### Usage Example
+
+```astro
+import Layout from '@/layouts/Layout.astro'
+
+<Layout seo={{ 
+  title: 'Welcome', 
+  description: 'Learn how to use Vercel with Astro' 
+}}>
+  <!-- Page content -->
+</Layout>
+```
+
+### Where It's Used
+
+- `src/layouts/Layout.astro:30` - Included in the main layout
+
+### Features
+
+- **Title Template**: Automatically appends ` | ${SITE.title}` to page titles
+- **Fallback Values**: Uses site configuration defaults when props aren't provided
+- **Open Graph**: Configures OG tags for social media sharing
+- **Twitter Cards**: Sets up large image cards for Twitter
+- **Extensible**: Accepts any additional `astro-seo` props via spread operator
+
+### Site Configuration
+
+The component relies on the site configuration in `src/data/config.ts`:
+
+```typescript
+export const SITE = {
+  title: 'Astro on Vercel',
+  description: "Learn how to use Vercel's features with Astro",
+  image: '/open-graph.jpg',
+  url: 'https://astro-vercel-boilerplate.vercel.app',
+}
+```
+
+## Layout Component
+
+The main layout component that wraps all pages with HTML structure, SEO, and common components.
+
+### Props
+
+<ParamField path="seo" type="SEOProps" optional>
+  SEO configuration passed to the SEO component
+</ParamField>
+
+### Component Code
+
+Location: `src/layouts/Layout.astro`
+
+```astro
+---
+import type { Props as SEOProps } from 'astro-seo'
+import SpeedInsights from '@vercel/speed-insights/astro'
+import { ClientRouter } from 'astro:transitions'
+import Footer from '@/components/Footer.astro'
+import Header from '@/components/Header.astro'
+import SEO from '@/components/SEO.astro'
+import '@/assets/styles/globals.css'
+import '@fontsource-variable/inter'
+import '@picocss/pico/css/pico.orange.min.css'
+
+interface Props {
+  seo?: SEOProps
+}
+
+const { seo } = Astro.props
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="color-scheme" content="light dark" />
+    <link href="/pico-mark-light.svg" rel="icon" media="(prefers-color-scheme: light)" />
+    <link href="/pico-mark-dark.svg" rel="icon" media="(prefers-color-scheme: dark)" />
+    <meta name="generator" content={Astro.generator} />
+    <SEO {seo} />
+    <ClientRouter />
+    <SpeedInsights />
+  </head>
+  <body>
+    <Header />
+    <main class="container">
+      <slot />
+    </main>
+    <Footer />
+  </body>
+</html>
+```
+
+### Usage Example
+
+```astro
+---
+import Layout from '@/layouts/Layout.astro'
+
+export const prerender = false
+
+const data = await fetchData()
+---
+
+<Layout seo={{ title: 'My Page', description: 'Page description' }}>
+  <h1>Welcome</h1>
+  <p>Your content here...</p>
+</Layout>
+```
+
+### Where It's Used
+
+- `src/pages/index.astro:12` - Main homepage
+- Used by all pages in the boilerplate for consistent layout
+
+### Features
+
+- **Vercel Speed Insights**: Automatic performance monitoring
+- **Client-Side Routing**: Astro's view transitions for SPA-like navigation
+- **Theme Support**: Light/dark favicons based on color scheme
+- **Font Loading**: Inter variable font included
+- **Pico CSS**: Orange theme for styling
+- **SEO Integration**: Automatic meta tags and Open Graph data
+- **Responsive Container**: Main content wrapped in Pico's container class
+
+<Accordion title="Performance Optimizations">
+  The layout includes several performance optimizations:
+  
+  1. **Speed Insights**: Vercel's Speed Insights tracks real-user performance metrics
+  2. **Client Router**: Enables faster page transitions without full reloads
+  3. **Variable Fonts**: Uses Inter variable font for better loading performance
+  4. **Theme-Aware Favicons**: Only loads the appropriate favicon per color scheme
+  
+  ```astro
+  <link href="/pico-mark-light.svg" rel="icon" media="(prefers-color-scheme: light)" />
+  <link href="/pico-mark-dark.svg" rel="icon" media="(prefers-color-scheme: dark)" />
+  ```
+</Accordion>
+
+## Component Organization
+
+<CodeGroup>
+```bash Structure
+src/
+├── components/
+│   ├── Card.astro          # Reusable card component
+│   ├── Footer.astro        # Site footer
+│   ├── Header.astro        # Site header with logos
+│   └── SEO.astro           # SEO meta tags wrapper
+└── layouts/
+    └── Layout.astro        # Main page layout
+```
+
+```typescript Import Aliases
+// All components use @ alias for imports
+import Card from '@/components/Card.astro'
+import Layout from '@/layouts/Layout.astro'
+import { SITE } from '@/data/config'
+```
+</CodeGroup>
+
+## Styling
+
+All components use [Pico CSS](https://picocss.com/) for styling:
+
+- Semantic HTML elements are automatically styled
+- `.container` class provides responsive layout
+- Components work with both light and dark themes
+- No additional CSS frameworks needed
+
+## Best Practices
+
+1. **Use the Layout Component**: Wrap all pages in `<Layout>` for consistency
+2. **Pass SEO Props**: Always provide page-specific SEO data when possible
+3. **Leverage Slots**: The Card and Layout components use slots for flexible content
+4. **Type Safety**: All components use TypeScript interfaces for props
+5. **Optimize Images**: Use Astro's `<Image>` component like Header.astro does
+
+## Related Resources
+
+- [Astro Components Documentation](https://docs.astro.build/en/basics/astro-components/)
+- [Pico CSS Documentation](https://picocss.com/docs)
+- [astro-seo Package](https://github.com/jonasmerlin/astro-seo)

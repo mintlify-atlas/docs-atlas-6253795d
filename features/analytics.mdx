@@ -1,0 +1,310 @@
+---
+title: 'Analytics & Performance Monitoring'
+description: 'Track web vitals and user analytics with Vercel Analytics and Speed Insights'
+---
+
+## Overview
+
+Vercel provides two analytics solutions for monitoring your Astro application:
+- **Web Analytics**: Track page views, visitor data, and user behavior
+- **Speed Insights**: Monitor Core Web Vitals and performance metrics
+
+<Note>
+Both analytics solutions are privacy-friendly, GDPR-compliant, and don't use cookies.
+</Note>
+
+## Installation
+
+The boilerplate includes both analytics packages:
+
+```json title="package.json"
+{
+  "dependencies": {
+    "@vercel/analytics": "^1.6.1",
+    "@vercel/speed-insights": "^1.3.1",
+    "web-vitals": "^5.1.0"
+  }
+}
+```
+
+Install the packages if not already present:
+
+```bash
+npm install @vercel/analytics @vercel/speed-insights web-vitals
+```
+
+## Configuration
+
+Enable Web Analytics in your Astro config:
+
+```javascript title="astro.config.mjs"
+import vercel from '@astrojs/vercel'
+import { defineConfig } from 'astro/config'
+
+export default defineConfig({
+  adapter: vercel({
+    webAnalytics: {
+      enabled: true,
+    },
+  }),
+})
+```
+
+<Tip>
+Web Analytics is automatically enabled for all production deployments on Vercel.
+</Tip>
+
+## Web Vitals Implementation
+
+The boilerplate includes a custom Web Vitals script:
+
+```javascript title="src/assets/scripts/web-vitals.js"
+import { webVitals } from '../../lib/vitals'
+
+const analyticsId = import.meta.env.PUBLIC_VERCEL_ANALYTICS_ID
+
+if (analyticsId) {
+  webVitals({
+    path: location.pathname,
+    params: location.search,
+    analyticsId,
+  })
+}
+```
+
+### Web Vitals Library
+
+The vitals library tracks Core Web Vitals:
+
+```javascript title="src/lib/vitals.js"
+import { onCLS, onFCP, onFID, onLCP, onTTFB } from "web-vitals";
+
+const vitalsUrl = "https://vitals.vercel-analytics.com/v1/vitals";
+
+function getConnectionSpeed() {
+  return "connection" in navigator &&
+    navigator["connection"] &&
+    "effectiveType" in navigator["connection"]
+    ? navigator["connection"]["effectiveType"]
+    : "";
+}
+
+export function sendToAnalytics(metric, options) {
+  const page = Object.entries(options.params).reduce(
+    (acc, [key, value]) => acc.replace(value, `[${key}]`),
+    options.path
+  );
+
+  const body = {
+    dsn: options.analyticsId,
+    id: metric.id,
+    page,
+    href: location.href,
+    event_name: metric.name,
+    value: metric.value.toString(),
+    speed: getConnectionSpeed(),
+  };
+
+  const blob = new Blob([new URLSearchParams(body).toString()], {
+    type: "application/x-www-form-urlencoded",
+  });
+  
+  if (navigator.sendBeacon) {
+    navigator.sendBeacon(vitalsUrl, blob);
+  } else {
+    fetch(vitalsUrl, {
+      body: blob,
+      method: "POST",
+      credentials: "omit",
+      keepalive: true,
+    });
+  }
+}
+
+export function webVitals(options) {
+  try {
+    onFID((metric) => sendToAnalytics(metric, options));
+    onTTFB((metric) => sendToAnalytics(metric, options));
+    onLCP((metric) => sendToAnalytics(metric, options));
+    onCLS((metric) => sendToAnalytics(metric, options));
+    onFCP((metric) => sendToAnalytics(metric, options));
+  } catch (err) {
+    console.error("[Web Vitals]", err);
+  }
+}
+```
+
+## Core Web Vitals
+
+The implementation tracks these key metrics:
+
+<Tabs>
+  <Tab title="LCP">
+    **Largest Contentful Paint**
+    
+    Measures loading performance. Occurs when the largest content element becomes visible.
+    
+    - Good: < 2.5s
+    - Needs Improvement: 2.5s - 4s
+    - Poor: > 4s
+  </Tab>
+  <Tab title="FID">
+    **First Input Delay**
+    
+    Measures interactivity. Time from when a user first interacts with your page to when the browser responds.
+    
+    - Good: < 100ms
+    - Needs Improvement: 100ms - 300ms
+    - Poor: > 300ms
+  </Tab>
+  <Tab title="CLS">
+    **Cumulative Layout Shift**
+    
+    Measures visual stability. Sum of all unexpected layout shifts during the page's lifecycle.
+    
+    - Good: < 0.1
+    - Needs Improvement: 0.1 - 0.25
+    - Poor: > 0.25
+  </Tab>
+  <Tab title="TTFB">
+    **Time to First Byte**
+    
+    Measures server response time. Time from navigation start to when the browser receives the first byte.
+    
+    - Good: < 800ms
+    - Needs Improvement: 800ms - 1800ms
+    - Poor: > 1800ms
+  </Tab>
+  <Tab title="FCP">
+    **First Contentful Paint**
+    
+    Measures perceived load speed. Time when the first content appears on screen.
+    
+    - Good: < 1.8s
+    - Needs Improvement: 1.8s - 3s
+    - Poor: > 3s
+  </Tab>
+</Tabs>
+
+## Viewing Analytics
+
+Access analytics data in your Vercel dashboard:
+
+1. Navigate to your project on Vercel
+2. Click the **Analytics** tab
+3. View metrics, page views, and visitor data
+4. Click **Speed Insights** for Core Web Vitals
+
+<Note>
+Analytics data is available for all Vercel deployments, including preview deployments.
+</Note>
+
+## Custom Events
+
+Track custom events in your application:
+
+```javascript
+import { track } from '@vercel/analytics'
+
+// Track a custom event
+track('button_click', {
+  location: 'header',
+  button_name: 'signup',
+})
+
+// Track with user properties
+track('purchase', {
+  product_id: '123',
+  price: 99.99,
+  currency: 'USD',
+})
+```
+
+## Environment Variables
+
+The analytics implementation uses environment variables:
+
+```bash
+# Automatically provided by Vercel
+PUBLIC_VERCEL_ANALYTICS_ID=your-analytics-id
+```
+
+<Warning>
+Do not manually set `PUBLIC_VERCEL_ANALYTICS_ID`. Vercel automatically provides this in production.
+</Warning>
+
+## Performance Monitoring
+
+Monitor performance across different pages and user segments:
+
+<CodeGroup>
+```javascript By Page
+// Track vitals for specific pages
+webVitals({
+  path: '/checkout',
+  params: '?step=payment',
+  analyticsId,
+})
+```
+
+```javascript By User
+// Include user information
+webVitals({
+  path: location.pathname,
+  params: location.search,
+  analyticsId,
+  userId: currentUser.id,
+})
+```
+
+```javascript Connection Speed
+// Automatically tracked
+getConnectionSpeed()  // '4g', '3g', '2g', 'slow-2g'
+```
+</CodeGroup>
+
+## Privacy & Compliance
+
+Vercel Analytics is privacy-focused:
+
+- No cookies used
+- GDPR compliant
+- No personal data collected
+- Visitor data is anonymized
+- No cross-site tracking
+
+<Tip>
+You don't need a cookie consent banner for Vercel Analytics.
+</Tip>
+
+## Best Practices
+
+1. **Monitor Regularly**: Check analytics weekly to identify trends
+2. **Set Performance Budgets**: Define acceptable thresholds for Core Web Vitals
+3. **Test on Real Devices**: Speed Insights shows real user metrics
+4. **Optimize Based on Data**: Focus on pages with poor vitals
+5. **Track Key User Flows**: Monitor critical paths like checkout or signup
+
+## Debugging
+
+Enable debug mode to see vitals in the console:
+
+```javascript
+webVitals({
+  path: location.pathname,
+  params: location.search,
+  analyticsId,
+  debug: true,  // Log metrics to console
+})
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Image Optimization" icon="image" href="/features/image-optimization">
+    Improve LCP with optimized images
+  </Card>
+  <Card title="Edge Functions" icon="bolt" href="/features/edge-functions">
+    Reduce TTFB with edge execution
+  </Card>
+</CardGroup>

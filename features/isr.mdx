@@ -1,0 +1,217 @@
+---
+title: 'Incremental Static Regeneration (ISR)'
+description: 'Learn how to use ISR to update static content without redeploying your Astro site'
+---
+
+## Overview
+
+Incremental Static Regeneration (ISR) allows you to update static pages after deployment without rebuilding your entire site. Pages are statically generated at build time and can be revalidated on-demand or after a specified time period.
+
+<Note>
+ISR combines the performance benefits of static generation with the flexibility of server-side rendering.
+</Note>
+
+## Enabling ISR
+
+Configure ISR in your Astro config:
+
+```javascript title="astro.config.mjs"
+import vercel from '@astrojs/vercel'
+import { defineConfig } from 'astro/config'
+
+export default defineConfig({
+  output: 'server',
+  adapter: vercel({
+    isr: {
+      // Cache pages for 24 hours (in seconds)
+      expiration: 60 * 60 * 24,
+      
+      // Bypass token for manual revalidation
+      bypassToken: '115556d774a8115556d774a8115556d774a8s',
+      
+      // Paths that should always use SSR
+      exclude: ['/api/revalidate', '/ssr', '/edge.json'],
+    },
+  }),
+})
+```
+
+### Configuration Options
+
+<CodeGroup>
+```javascript expiration
+// Cache duration in seconds
+expiration: 60 * 60 * 24  // 24 hours
+```
+
+```javascript bypassToken
+// Secret token for manual revalidation
+bypassToken: 'your-secret-token'
+```
+
+```javascript exclude
+// Pages that should not use ISR
+exclude: ['/api/*', '/ssr']
+```
+</CodeGroup>
+
+## Creating an ISR Page
+
+Like SSR, ISR pages need `prerender: false`. The difference is in how caching headers are configured:
+
+```astro title="src/pages/isr.astro"
+---
+import Layout from '@/layouts/Layout.astro'
+
+export const prerender = false
+
+const time = new Date().toLocaleTimeString()
+---
+
+<Layout
+  seo={{
+    title: 'Incremental Static Regeneration (ISR)',
+    description: 'A page that uses Incremental Static Regeneration (ISR) allows you to create or update content on your site without redeploying',
+  }}>
+  <section>
+    <hgroup>
+      <h2>Incremental Static Regeneration (ISR)</h2>
+      <p>
+        A page that uses Incremental Static Regeneration (ISR) allows you to create or update
+        content on your site without redeploying
+      </p>
+    </hgroup>
+
+    <h1>{time}</h1>
+
+    <a href="/isr">Refresh</a> &nbsp; <button id="revalidate">Revalidate</button>
+  </section>
+</Layout>
+
+<script is:inline>
+  function revalidate() {
+    fetch('/api/revalidate', {
+      method: 'POST',
+      body: JSON.stringify(''),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+    alert(`Revalidated`)
+  }
+
+  const revalidateButton = document.querySelectorAll('button#revalidate')[0]
+  revalidateButton.addEventListener('click', () => {
+    revalidate()
+  })
+</script>
+```
+
+## Cache-Control Headers
+
+You can customize caching behavior with cache-control headers:
+
+```astro title="src/pages/isr.astro"
+---
+export const prerender = false
+
+// Cache for 10 seconds, serve stale while revalidating
+Astro.response.headers.set('Cache-Control', 's-maxage=10, stale-while-revalidate')
+
+// CDN-specific cache control
+Astro.response.headers.set('Vercel-CDN-Cache-Control', 'max-age=3600')
+Astro.response.headers.set('CDN-Cache-Control', 'max-age=60')
+---
+```
+
+<Tabs>
+  <Tab title="s-maxage">
+    Sets how long the page is cached on the CDN before requiring revalidation.
+    ```
+    s-maxage=10  // Cache for 10 seconds
+    ```
+  </Tab>
+  <Tab title="stale-while-revalidate">
+    Serves cached content while fetching fresh data in the background.
+    ```
+    stale-while-revalidate  // Serve stale, update async
+    ```
+  </Tab>
+  <Tab title="max-age">
+    Controls browser cache duration.
+    ```
+    max-age=3600  // Browser caches for 1 hour
+    ```
+  </Tab>
+</Tabs>
+
+## Manual Revalidation
+
+Create an API endpoint to trigger revalidation on-demand:
+
+```typescript title="src/pages/api/revalidate.ts"
+import type { APIRoute } from 'astro'
+
+export const prerender = false
+
+export const POST: APIRoute = async ({ request }) => {
+  const { tag } = await request.json()
+
+  return new Response(JSON.stringify(tag), {
+    status: 200,
+    headers: {
+      'Content-Type': 'application/json',
+      'x-prerender-revalidate': '115556d774a8115556d774a8115556d774a8',
+    },
+  })
+}
+```
+
+<Warning>
+The `x-prerender-revalidate` header must match the `bypassToken` configured in your `astro.config.mjs`.
+</Warning>
+
+### Triggering Revalidation
+
+Call the revalidation endpoint from your application:
+
+```javascript
+fetch('/api/revalidate', {
+  method: 'POST',
+  body: JSON.stringify(''),
+  headers: {
+    'Content-Type': 'application/json',
+  },
+})
+```
+
+## How ISR Works
+
+1. **Initial Request**: Page is statically generated at build time or on first request
+2. **Cache Period**: Subsequent requests serve the cached version
+3. **Revalidation**: After expiration, the next request triggers regeneration
+4. **Background Update**: Fresh content is generated while serving stale content
+5. **Cache Update**: New version replaces the cached page
+
+<Tip>
+Use `stale-while-revalidate` to ensure users always get fast responses, even during revalidation.
+</Tip>
+
+## Use Cases
+
+- **Blog Posts**: Update content without rebuilding the entire site
+- **Product Pages**: Refresh prices and availability on-demand
+- **Marketing Pages**: Update campaigns and promotions instantly
+- **Documentation**: Publish changes without full redeployment
+- **News Sites**: Keep articles fresh while maintaining performance
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="SSR" icon="server" href="/features/ssr">
+    Learn about server-side rendering
+  </Card>
+  <Card title="Edge Functions" icon="bolt" href="/features/edge-functions">
+    Build dynamic API endpoints
+  </Card>
+</CardGroup>
