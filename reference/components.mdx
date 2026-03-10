@@ -485,8 +485,109 @@ All components use [Pico CSS](https://picocss.com/) for styling:
 4. **Type Safety**: All components use TypeScript interfaces for props
 5. **Optimize Images**: Use Astro's `<Image>` component like Header.astro does
 
+## Utility Scripts
+
+The boilerplate includes several utility scripts in `src/assets/scripts/`:
+
+### Theme Switcher
+
+Location: `src/assets/scripts/theme-switcher.js`
+
+Provides theme switching functionality with local storage persistence:
+
+```javascript title="theme-switcher.js" lines
+const themeSwitcher = {
+  _scheme: 'auto',
+  localStorageKey: 'picoPreferredColorScheme',
+  
+  init() {
+    this.scheme = this.schemeFromLocalStorage
+    this.initSwitchers()
+  },
+  
+  get preferredColorScheme() {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  },
+  
+  set scheme(scheme) {
+    if (scheme === 'auto') {
+      this._scheme = this.preferredColorScheme
+    } else if (scheme === 'dark' || scheme === 'light') {
+      this._scheme = scheme
+    }
+    this.applyScheme()
+    this.schemeToLocalStorage()
+  }
+}
+
+themeSwitcher.init()
+```
+
+**Features:**
+- Auto-detects system theme preference
+- Persists user preference in localStorage
+- Supports light, dark, and auto modes
+
+### Web Vitals Tracking
+
+Location: `src/assets/scripts/web-vitals.js`
+
+Tracks Core Web Vitals and sends them to Vercel Analytics:
+
+```javascript title="web-vitals.js"
+import { onCLS, onFCP, onFID, onLCP, onTTFB } from 'web-vitals'
+
+function sendToVercelAnalytics(metric) {
+  const body = JSON.stringify({
+    dsn: import.meta.env.PUBLIC_VERCEL_ANALYTICS_ID,
+    id: metric.id,
+    page: window.location.pathname,
+    href: window.location.href,
+    event_name: metric.name,
+    value: metric.value.toString(),
+    speed: 'edge',
+  })
+  
+  if (navigator.sendBeacon) {
+    navigator.sendBeacon('/_vercel/insights', body)
+  }
+}
+
+// Track all Core Web Vitals
+onCLS(sendToVercelAnalytics)
+onFCP(sendToVercelAnalytics)
+onFID(sendToVercelAnalytics)
+onLCP(sendToVercelAnalytics)
+onTTFB(sendToVercelAnalytics)
+```
+
+**Metrics tracked:**
+- **LCP** (Largest Contentful Paint): Loading performance
+- **FID** (First Input Delay): Interactivity
+- **CLS** (Cumulative Layout Shift): Visual stability
+- **TTFB** (Time to First Byte): Server response time
+- **FCP** (First Contentful Paint): Perceived load speed
+
+### Site Configuration
+
+Location: `src/data/config.ts`
+
+Central configuration for site metadata:
+
+```typescript title="config.ts"
+export const SITE = {
+  title: 'Astro on Vercel',
+  description: "Learn how to use Vercel's features with Astro",
+  image: '/open-graph.jpg',
+  url: 'https://astro-vercel-boilerplate.vercel.app',
+}
+```
+
+This configuration is used by the SEO component for meta tags and Open Graph data.
+
 ## Related Resources
 
 - [Astro Components Documentation](https://docs.astro.build/en/basics/astro-components/)
 - [Pico CSS Documentation](https://picocss.com/docs)
 - [astro-seo Package](https://github.com/jonasmerlin/astro-seo)
+- [Web Vitals Library](https://github.com/GoogleChrome/web-vitals)

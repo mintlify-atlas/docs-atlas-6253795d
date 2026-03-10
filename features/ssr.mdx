@@ -118,6 +118,30 @@ export default defineConfig({
 You can mix static and SSR pages in the same project. Pages with `prerender: false` will use SSR, while others remain static.
 </Tip>
 
+## SSR with Caching
+
+You can combine SSR with cache-control headers to cache responses at the edge while still regenerating them server-side. This provides a balance between dynamic content and performance:
+
+```astro title="src/pages/ssr-with-swr-caching.astro"
+---
+export const prerender = false
+
+// Set cache headers for stale-while-revalidate
+Astro.response.headers.set('Cache-Control', 's-maxage=10, stale-while-revalidate')
+
+const time = new Date().toLocaleTimeString()
+---
+
+<Layout>
+  <h1>{time}</h1>
+  <p>This page is cached for 10 seconds, then revalidated in the background</p>
+</Layout>
+```
+
+<Note>
+The `s-maxage=10` directive caches the response for 10 seconds, while `stale-while-revalidate` allows serving stale content while fetching fresh data in the background.
+</Note>
+
 ## Use Cases
 
 - **Personalization**: Display content based on user location, preferences, or authentication
